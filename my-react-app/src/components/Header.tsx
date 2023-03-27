@@ -9,8 +9,9 @@ const Header: React.FC<HeaderProps> = ({ itemCount, onSearch }) => {
   const [searchTerm, setSearchTerm] = React.useState("");
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-    onSearch(event.target.value);
+    const term = event.target.value;
+    setSearchTerm(term);
+    onSearch(term);
   };
 
   return (

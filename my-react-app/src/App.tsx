@@ -1,14 +1,9 @@
-import React from "react";
+import React, { useMemo, useCallback } from "react";
 import axios from "axios";
 import Header from "./components/Header";
-import Sidebar from "./components/Sidebar";
+import Sidebar, { Pokemon } from "./components/Sidebar";
 import Body from "./components/Body";
 import Footer from "./components/Footer";
-
-interface Pokemon {
-  name: string;
-  url: string;
-}
 
 interface Sprite {
   front_default: string;
@@ -23,49 +18,48 @@ interface PokemonDetails {
 const POKEAPI_BASE_URL = "https://pokeapi.co/api/v2/";
 
 const App: React.FC = () => {
-  const [items, setItems] = React.useState<Pokemon[]>([]);
-  const [itemDetails, setItemDetails] = React.useState<PokemonDetails>({
-    name: "",
-    imageUrl: "",
-    sprites: { front_default: "" },
-  });
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [pokemonData, setPokemonData] = React.useState<Pokemon[]>([]);
+  const [selectedPokemon, setSelectedPokemon] = React.useState<PokemonDetails | null>(null);
 
-  const handleSearch = (searchTerm: string) => {
-    fetchData(`pokemon?limit=1000&offset=0`)
-      .then((data) => {
-        const filteredItems = data.results.filter((item: { name: string | string[]; }) =>
-          item.name.includes(searchTerm.toLowerCase())
-        );
-        setItems(filteredItems);
-      })
-      .catch((error) => console.error(error));
-  };
+  const filteredPokemonData = useMemo(() => {
+    return pokemonData.filter((item) => item.name.includes(searchTerm.toLowerCase()));
+  }, [pokemonData, searchTerm]);
 
-  const handleItemClick = (item: Pokemon) => {
-    fetchData(item.url)
-      .then((data) => {
-        setItemDetails({
-          name: data.name,
-          imageUrl: `https://pokeres.bastionbot.org/images/pokemon/${data.id}.png`,
-          sprites: data.sprites,
-        });
-      })
-      .catch((error) => console.error(error));
-  };
+  const handleSearch = useCallback((searchTerm: string) => {
+    setSearchTerm(searchTerm);
+  }, []);
 
-  const fetchData = async (endpoint: string) => {
-    const response = await axios.get(`${POKEAPI_BASE_URL}${endpoint}`);
-    return response.data;
-  };
+  const handleItemClick = useCallback(async (item: Pokemon) => {
+    const response = await axios.get(item.url);
+    const data = response.data;
+    setSelectedPokemon({
+      name: data.name,
+      imageUrl: `https://pokeres.bastionbot.org/images/pokemon/${data.id}.png`,
+      sprites: data.sprites,
+    });
+  }, []);
+
+  const fetchPokemonData = useCallback(async () => {
+    const response = await axios.get(`${POKEAPI_BASE_URL}pokemon?limit=1000&offset=0`);
+    const data = response.data;
+    setPokemonData(data.results);
+  }, []);
+
+  React.useEffect(() => {
+    fetchPokemonData();
+  }, [fetchPokemonData]);
 
   return (
     <div>
-      <Header itemCount={items.length} onSearch={handleSearch} />
-      <Sidebar items={items} onItemClick={handleItemClick} />
-      <Body itemDetails={itemDetails} />
+      <Header itemCount={filteredPokemonData.length} onSearch={handleSearch} />
+      <Sidebar items={filteredPokemonData} onItemClick={handleItemClick} />
+      <Body itemDetails={selectedPokemon} />
       <Footer />
     </div>
   );
 };
 
 export default App;
+
+
